@@ -1608,27 +1608,25 @@ switch ($mainArgument){
           pfz_gw_rawstatus();
           break;
 	 case "wan_status_aggregate":
-			// Nova métrica para status agregado dos gateways WAN (versão corrigida e robusta)
+			// Versão final otimizada - lê status direto dos arquivos do dpinger (muito rápido)
+			$status_files = glob("/tmp/bsd_dpinger_*.status");
 
-			// !! IMPORTANTE !! Substitua o caminho abaixo pelo que você encontrou com o comando 'find'
-			$pfSsh_path = '/usr/local/sbin/pfSsh.php';
-
-			$gateways_str = shell_exec($pfSsh_path . ' playback gateway_list 2>/dev/null');
-			$gateways = explode("\n", trim($gateways_str));
-
-			if (empty($gateways) || empty($gateways[0])) {
-				echo 0; // Nenhum gateway encontrado ou comando falhou
+			if (empty($status_files)) {
+				echo 0; // Nenhum serviço dpinger rodando
 				break;
 			}
 
-			$total_gateways = count($gateways);
+			$total_gateways = count($status_files);
 			$up_gateways = 0;
 
-			foreach ($gateways as $gw) {
-				$gw_status_str = shell_exec($pfSsh_path . ' playback gateway_status ' . escapeshellarg($gw) . ' 2>/dev/null');
-				// A função gateway_status retorna uma string como "online", "down", etc.
-				if (trim(strtolower($gw_status_str)) == 'online') {
-					$up_gateways++;
+			foreach ($status_files as $file) {
+				$content = file_get_contents($file);
+				if ($content !== false) {
+					// O status está na primeira linha (ex: "wan 500 0 online")
+					list(,$latency, $loss, $status) = explode(" ", trim($content));
+					if (strtolower($status) == 'online') {
+						$up_gateways++;
+					}
 				}
 			}
 
