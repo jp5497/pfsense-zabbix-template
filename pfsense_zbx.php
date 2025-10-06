@@ -1608,12 +1608,16 @@ switch ($mainArgument){
           pfz_gw_rawstatus();
           break;
 	 case "wan_status_aggregate":
-			// Nova métrica para status agregado dos gateways WAN
-			$gateways_str = shell_exec('/sbin/pfSsh.php playback gateway_list');
+			// Nova métrica para status agregado dos gateways WAN (versão corrigida e robusta)
+
+			// !! IMPORTANTE !! Substitua o caminho abaixo pelo que você encontrou com o comando 'find'
+			$pfSsh_path = '/usr/local/sbin/pfSsh.php';
+
+			$gateways_str = shell_exec($pfSsh_path . ' playback gateway_list 2>/dev/null');
 			$gateways = explode("\n", trim($gateways_str));
 
 			if (empty($gateways) || empty($gateways[0])) {
-				echo 0; // Nenhum gateway encontrado
+				echo 0; // Nenhum gateway encontrado ou comando falhou
 				break;
 			}
 
@@ -1621,9 +1625,8 @@ switch ($mainArgument){
 			$up_gateways = 0;
 
 			foreach ($gateways as $gw) {
-				$gw_status_str = shell_exec('/sbin/pfSsh.php playback gateway_status ' . escapeshellarg($gw));
+				$gw_status_str = shell_exec($pfSsh_path . ' playback gateway_status ' . escapeshellarg($gw) . ' 2>/dev/null');
 				// A função gateway_status retorna uma string como "online", "down", etc.
-				// Vamos considerar "online" como UP.
 				if (trim(strtolower($gw_status_str)) == 'online') {
 					$up_gateways++;
 				}
