@@ -1607,6 +1607,36 @@ switch ($mainArgument){
      case "gw_status":
           pfz_gw_rawstatus();
           break;
+	 case "wan_status_aggregate":
+			// Nova métrica para status agregado dos gateways WAN
+			$gateways_str = shell_exec('/sbin/pfSsh.php playback gateway_list');
+			$gateways = explode("\n", trim($gateways_str));
+
+			if (empty($gateways) || empty($gateways[0])) {
+				echo 0; // Nenhum gateway encontrado
+				break;
+			}
+
+			$total_gateways = count($gateways);
+			$up_gateways = 0;
+
+			foreach ($gateways as $gw) {
+				$gw_status_str = shell_exec('/sbin/pfSsh.php playback gateway_status ' . escapeshellarg($gw));
+				// A função gateway_status retorna uma string como "online", "down", etc.
+				// Vamos considerar "online" como UP.
+				if (trim(strtolower($gw_status_str)) == 'online') {
+					$up_gateways++;
+				}
+			}
+
+			if ($up_gateways == $total_gateways) {
+				echo 2; // Todos os gateways estão online
+			} elseif ($up_gateways > 0) {
+				echo 1; // Pelo menos um gateway está online (estado degradado)
+			} else {
+				echo 0; // Todos os gateways estão offline
+			}
+			break;
 	 case "if_speedtest_value":
 	      pfz_speedtest_cron_install();
 	 	  pfz_interface_speedtest_value($argv[2],$argv[3]);
